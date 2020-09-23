@@ -1,0 +1,589 @@
+# 一、XMl配置标签等级信息
+
+- configuration（配置）
+  - properties（属性-用于映入properties文件使用该文件的变量）
+  - settings（设置）
+  - typaAliases（类型别名）
+  - typeHandlers（类型处理器）
+  - objectFactory（对象工厂）
+  - environments（环境配置）
+    - environment（环境变量）
+      - transactionManager（事务管理器）
+      - dataSource（数据源）
+  - databaseldProvider（数据库厂商标志）
+  - mappers(映射器)
+
+==注意==：mybatis全局配置文件顺序是固定的，否则会报错。
+
+
+
+# 二、properties 参数信息
+
+在properties文件设置了属性，在其他标签中动态使用
+
+```xml
+//config.properties文件中包含url/driver属性
+<properties resource="org/mybatis/example/config.properties">
+  <property name="username" value="dev_user"/>
+  <property name="password" value="F2Fa3!33TYyg"/>
+</properties>
+//使用${}引用属性值
+<dataSource type="POOLED">
+  <property name="driver" value="${driver}"/>
+  <property name="url" value="${url}"/>
+  <property name="username" value="${username}"/>
+  <property name="password" value="${password}"/>
+</dataSource>
+
+```
+
+## 特别事项
+
+### 使用properties优先级：
+
+- 首先读取在 properties 元素体内指定的属性。3
+- 然后根据 properties 元素中的 resource 属性读取类路径下属性文件，或根据 url 属性指定的路径读取属性文件，并覆盖之前读取过的同名属性。2
+- 最后读取作为方法参数传递的属性，并覆盖之前读取过的同名属性。1
+
+### 3.4.2起properties支持指定默认值
+
+- 现在properties中开启默认值的功能
+
+```xml
+<properties resource="org/mybatis/example/config.properties">
+  <!-- ... -->
+  <property name="org.apache.ibatis.parsing.PropertyParser.enable-default-value" value="true"/> <!-- 启用默认值特性 -->
+</properties>
+```
+
+```xml
+<dataSource type="POOLED">
+  <!-- ... -->
+  <property name="username" value="${username:ut_user}"/> <!-- 如果属性 'username' 没有被配置，'username' 属性的值将为 'ut_user' -->
+</dataSource>
+```
+
+
+
+# 三、setting
+
+这是 MyBatis 中极为重要的调整设置，它们会改变 MyBatis 的运行时行为。 下表描述了设置中各项设置的含义、默认值等。
+
+| 设置名                           | 描述                                                         | 有效值                                                       | 默认值                                                |
+| :------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- | :---------------------------------------------------- |
+| cacheEnabled                     | 全局性地开启或关闭所有映射器配置文件中已配置的任何缓存。     | true \| false                                                | true                                                  |
+| lazyLoadingEnabled               | 延迟加载的全局开关。当开启时，所有关联对象都会延迟加载。 特定关联关系中可通过设置 `fetchType` 属性来覆盖该项的开关状态。 | true \| false                                                | false                                                 |
+| aggressiveLazyLoading            | 开启时，任一方法的调用都会加载该对象的所有延迟加载属性。 否则，每个延迟加载属性会按需加载（参考 `lazyLoadTriggerMethods`)。 | true \| false                                                | false （在 3.4.1 及之前的版本中默认为 true）          |
+| multipleResultSetsEnabled        | 是否允许单个语句返回多结果集（需要数据库驱动支持）。         | true \| false                                                | true                                                  |
+| useColumnLabel                   | 使用列标签代替列名。实际表现依赖于数据库驱动，具体可参考数据库驱动的相关文档，或通过对比测试来观察。 | true \| false                                                | true                                                  |
+| useGeneratedKeys                 | 允许 JDBC 支持自动生成主键，需要数据库驱动支持。如果设置为 true，将强制使用自动生成主键。尽管一些数据库驱动不支持此特性，但仍可正常工作（如 Derby）。 | true \| false                                                | False                                                 |
+| autoMappingBehavior              | 指定 MyBatis 应如何自动映射列到字段或属性。 NONE 表示关闭自动映射；PARTIAL 只会自动映射没有定义嵌套结果映射的字段。 FULL 会自动映射任何复杂的结果集（无论是否嵌套）。 | NONE, PARTIAL, FULL                                          | PARTIAL                                               |
+| autoMappingUnknownColumnBehavior | 指定发现自动映射目标未知列（或未知属性类型）的行为。`NONE`: 不做任何反应`WARNING`: 输出警告日志（`'org.apache.ibatis.session.AutoMappingUnknownColumnBehavior'` 的日志等级必须设置为 `WARN`）`FAILING`: 映射失败 (抛出 `SqlSessionException`) | NONE, WARNING, FAILING                                       | NONE                                                  |
+| defaultExecutorType              | 配置默认的执行器。SIMPLE 就是普通的执行器；REUSE 执行器会重用预处理语句（PreparedStatement）； BATCH 执行器不仅重用语句还会执行批量更新。 | SIMPLE REUSE BATCH                                           | SIMPLE                                                |
+| defaultStatementTimeout          | 设置超时时间，它决定数据库驱动等待数据库响应的秒数。         | 任意正整数                                                   | 未设置 (null)                                         |
+| defaultFetchSize                 | 为驱动的结果集获取数量（fetchSize）设置一个建议值。此参数只可以在查询设置中被覆盖。 | 任意正整数                                                   | 未设置 (null)                                         |
+| defaultResultSetType             | 指定语句默认的滚动策略。（新增于 3.5.2）                     | FORWARD_ONLY \| SCROLL_SENSITIVE \| SCROLL_INSENSITIVE \| DEFAULT（等同于未设置） | 未设置 (null)                                         |
+| safeRowBoundsEnabled             | 是否允许在嵌套语句中使用分页（RowBounds）。如果允许使用则设置为 false。 | true \| false                                                | False                                                 |
+| safeResultHandlerEnabled         | 是否允许在嵌套语句中使用结果处理器（ResultHandler）。如果允许使用则设置为 false。 | true \| false                                                | True                                                  |
+| mapUnderscoreToCamelCase         | 是否开启驼峰命名自动映射，即从经典数据库列名 A_COLUMN 映射到经典 Java 属性名 aColumn。 | true \| false                                                | False                                                 |
+| localCacheScope                  | MyBatis 利用本地缓存机制（Local Cache）防止循环引用和加速重复的嵌套查询。 默认值为 SESSION，会缓存一个会话中执行的所有查询。 若设置值为 STATEMENT，本地缓存将仅用于执行语句，对相同 SqlSession 的不同查询将不会进行缓存。 | SESSION \| STATEMENT                                         | SESSION                                               |
+| jdbcTypeForNull                  | 当没有为参数指定特定的 JDBC 类型时，空值的默认 JDBC 类型。 某些数据库驱动需要指定列的 JDBC 类型，多数情况直接用一般类型即可，比如 NULL、VARCHAR 或 OTHER。 | JdbcType 常量，常用值：NULL、VARCHAR 或 OTHER。              | OTHER                                                 |
+| lazyLoadTriggerMethods           | 指定对象的哪些方法触发一次延迟加载。                         | 用逗号分隔的方法列表。                                       | equals,clone,hashCode,toString                        |
+| defaultScriptingLanguage         | 指定动态 SQL 生成使用的默认脚本语言。                        | 一个类型别名或全限定类名。                                   | org.apache.ibatis.scripting.xmltags.XMLLanguageDriver |
+| defaultEnumTypeHandler           | 指定 Enum 使用的默认 `TypeHandler` 。（新增于 3.4.5）        | 一个类型别名或全限定类名。                                   | org.apache.ibatis.type.EnumTypeHandler                |
+| callSettersOnNulls               | 指定当结果集中值为 null 的时候是否调用映射对象的 setter（map 对象时为 put）方法，这在依赖于 Map.keySet() 或 null 值进行初始化时比较有用。注意基本类型（int、boolean 等）是不能设置成 null 的。 | true \| false                                                | false                                                 |
+| returnInstanceForEmptyRow        | 当返回行的所有列都是空时，MyBatis默认返回 `null`。 当开启这个设置时，MyBatis会返回一个空实例。 请注意，它也适用于嵌套的结果集（如集合或关联）。（新增于 3.4.2） | true \| false                                                | false                                                 |
+| logPrefix                        | 指定 MyBatis 增加到日志名称的前缀。                          | 任何字符串                                                   | 未设置                                                |
+| logImpl                          | 指定 MyBatis 所用日志的具体实现，未指定时将自动查找。        | SLF4J \| LOG4J \| LOG4J2 \| JDK_LOGGING \| COMMONS_LOGGING \| STDOUT_LOGGING \| NO_LOGGING | 未设置                                                |
+| proxyFactory                     | 指定 Mybatis 创建可延迟加载对象所用到的代理工具。            | CGLIB \| JAVASSIST                                           | JAVASSIST （MyBatis 3.3 以上）                        |
+| vfsImpl                          | 指定 VFS 的实现                                              | 自定义 VFS 的实现的类全限定名，以逗号分隔。                  | 未设置                                                |
+| useActualParamName               | 允许使用方法签名中的名称作为语句参数名称。 为了使用该特性，你的项目必须采用 Java 8 编译，并且加上 `-parameters` 选项。（新增于 3.4.1） | true \| false                                                | true                                                  |
+| configurationFactory             | 指定一个提供 `Configuration` 实例的类。 这个被返回的 Configuration 实例用来加载被反序列化对象的延迟加载属性值。 这个类必须包含一个签名为`static Configuration getConfiguration()` 的方法。（新增于 3.2.3） | 一个类型别名或完全限定类名。                                 | 未设置                                                |
+| shrinkWhitespacesInSql           | Removes extra whitespace characters from the SQL. Note that this also affects literal strings in SQL. (Since 3.5.5) | true \| false                                                | false                                                 |
+
+
+
+## 完整配置
+
+```xml
+<settings>
+  <setting name="cacheEnabled" value="true"/>
+  <setting name="lazyLoadingEnabled" value="true"/>
+  <setting name="multipleResultSetsEnabled" value="true"/>
+  <setting name="useColumnLabel" value="true"/>
+  <setting name="useGeneratedKeys" value="false"/>
+  <setting name="autoMappingBehavior" value="PARTIAL"/>
+  <setting name="autoMappingUnknownColumnBehavior" value="WARNING"/>
+  <setting name="defaultExecutorType" value="SIMPLE"/>
+  <setting name="defaultStatementTimeout" value="25"/>
+  <setting name="defaultFetchSize" value="100"/>
+  <setting name="safeRowBoundsEnabled" value="false"/>
+  <setting name="mapUnderscoreToCamelCase" value="false"/>
+  <setting name="localCacheScope" value="SESSION"/>
+  <setting name="jdbcTypeForNull" value="OTHER"/>
+  <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
+</settings>
+```
+
+
+
+# 四、typeAliases 类型别名
+
+## 1、给一个类设置别名
+
+### xml形式
+
+使用typeAliases给Java类设置一个别名，减少长串的类路径前缀。
+
+```xml
+<typeAliases>
+  <typeAlias alias="Author" type="domain.blog.Author"/>
+  <typeAlias alias="Blog" type="domain.blog.Blog"/>
+  <typeAlias alias="Comment" type="domain.blog.Comment"/>
+  <typeAlias alias="Post" type="domain.blog.Post"/>
+  <typeAlias alias="Section" type="domain.blog.Section"/>
+  <typeAlias alias="Tag" type="domain.blog.Tag"/>
+</typeAliases>
+```
+
+### 注解形式
+
+在没有注解的情况下，会使用 Bean 的首字母==小写的非限定类名==来作为它的别名。 比如 `domain.blog.Author` 的别名为 ==`author`==；若有注解，则别名为其注解值。
+
+```java
+@Alias("author")
+public class Author {
+    ...
+}
+```
+
+## 2、给包设置别名
+
+Mybatis会自动搜索在包路径下的需要的java bean。在没有注解的情况下，会使用 Bean 的首字母==小写的非限定类名==来作为它的别名。 比如 `domain.blog.Author` 的别名为 ==`author`==；若有注解，则别名为其注解值。
+
+```xml
+<typeAliases>
+  <package name="domain.blog"/>
+</typeAliases>
+```
+
+例如：在springboot配置了包名的路径
+
+```yml
+#mybatis的相关配置
+mybatis:
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+  #指定包的别名
+  type-aliases-package: com.example.springbootwithmybatis.pojo
+  #开启驼峰命名
+  configuration:
+    map-underscore-to-camel-case: true
+```
+
+```xml
+<select id="findAllUser" resultType="User">
+    select * from  user
+</select>
+```
+
+
+
+# 五、typeHandlers 类型处理器
+
+MyBatis 在设置==预处理语句==（PreparedStatement）中的==参数或从结果集中取出一个值==时， 都会用类型处理器将获取到的值以合适的方式转换成 Java 类型。下表描述了一些默认的类型处理器。
+
+## 1、Mybatis提供的类型处理器
+
+| 类型处理器                   | Java 类型                       | JDBC 类型                                                    |
+| :--------------------------- | :------------------------------ | :----------------------------------------------------------- |
+| `BooleanTypeHandler`         | `java.lang.Boolean`, `boolean`  | 数据库兼容的 `BOOLEAN`                                       |
+| `ByteTypeHandler`            | `java.lang.Byte`, `byte`        | 数据库兼容的 `NUMERIC` 或 `BYTE`                             |
+| `ShortTypeHandler`           | `java.lang.Short`, `short`      | 数据库兼容的 `NUMERIC` 或 `SMALLINT`                         |
+| `IntegerTypeHandler`         | `java.lang.Integer`, `int`      | 数据库兼容的 `NUMERIC` 或 `INTEGER`                          |
+| `LongTypeHandler`            | `java.lang.Long`, `long`        | 数据库兼容的 `NUMERIC` 或 `BIGINT`                           |
+| `FloatTypeHandler`           | `java.lang.Float`, `float`      | 数据库兼容的 `NUMERIC` 或 `FLOAT`                            |
+| `DoubleTypeHandler`          | `java.lang.Double`, `double`    | 数据库兼容的 `NUMERIC` 或 `DOUBLE`                           |
+| `BigDecimalTypeHandler`      | `java.math.BigDecimal`          | 数据库兼容的 `NUMERIC` 或 `DECIMAL`                          |
+| `StringTypeHandler`          | `java.lang.String`              | `CHAR`, `VARCHAR`                                            |
+| `ClobReaderTypeHandler`      | `java.io.Reader`                | -                                                            |
+| `ClobTypeHandler`            | `java.lang.String`              | `CLOB`, `LONGVARCHAR`                                        |
+| `NStringTypeHandler`         | `java.lang.String`              | `NVARCHAR`, `NCHAR`                                          |
+| `NClobTypeHandler`           | `java.lang.String`              | `NCLOB`                                                      |
+| `BlobInputStreamTypeHandler` | `java.io.InputStream`           | -                                                            |
+| `ByteArrayTypeHandler`       | `byte[]`                        | 数据库兼容的字节流类型                                       |
+| `BlobTypeHandler`            | `byte[]`                        | `BLOB`, `LONGVARBINARY`                                      |
+| `DateTypeHandler`            | `java.util.Date`                | `TIMESTAMP`                                                  |
+| `DateOnlyTypeHandler`        | `java.util.Date`                | `DATE`                                                       |
+| `TimeOnlyTypeHandler`        | `java.util.Date`                | `TIME`                                                       |
+| `SqlTimestampTypeHandler`    | `java.sql.Timestamp`            | `TIMESTAMP`                                                  |
+| `SqlDateTypeHandler`         | `java.sql.Date`                 | `DATE`                                                       |
+| `SqlTimeTypeHandler`         | `java.sql.Time`                 | `TIME`                                                       |
+| `ObjectTypeHandler`          | Any                             | `OTHER` 或未指定类型                                         |
+| `EnumTypeHandler`            | Enumeration Type                | VARCHAR 或任何兼容的字符串类型，用来存储枚举的名称（而不是索引序数值） |
+| `EnumOrdinalTypeHandler`     | Enumeration Type                | 任何兼容的 `NUMERIC` 或 `DOUBLE` 类型，用来存储枚举的序数值（而不是名称）。 |
+| `SqlxmlTypeHandler`          | `java.lang.String`              | `SQLXML`                                                     |
+| `InstantTypeHandler`         | `java.time.Instant`             | `TIMESTAMP`                                                  |
+| `LocalDateTimeTypeHandler`   | `java.time.LocalDateTime`       | `TIMESTAMP`                                                  |
+| `LocalDateTypeHandler`       | `java.time.LocalDate`           | `DATE`                                                       |
+| `LocalTimeTypeHandler`       | `java.time.LocalTime`           | `TIME`                                                       |
+| `OffsetDateTimeTypeHandler`  | `java.time.OffsetDateTime`      | `TIMESTAMP`                                                  |
+| `OffsetTimeTypeHandler`      | `java.time.OffsetTime`          | `TIME`                                                       |
+| `ZonedDateTimeTypeHandler`   | `java.time.ZonedDateTime`       | `TIMESTAMP`                                                  |
+| `YearTypeHandler`            | `java.time.Year`                | `INTEGER`                                                    |
+| `MonthTypeHandler`           | `java.time.Month`               | `INTEGER`                                                    |
+| `YearMonthTypeHandler`       | `java.time.YearMonth`           | `VARCHAR` 或 `LONGVARCHAR`                                   |
+| `JapaneseDateTypeHandler`    | `java.time.chrono.JapaneseDate` | `DATE`                                                       |
+
+在mybatis原码type包下：
+
+![image-20200913191323483](https://i.loli.net/2020/09/16/xfFRUHeGTkt5nOC.png)
+
+## 2、TypeHandler案例
+
+### 案例一：Springboot+Mybatis示例
+
+- 新建MyStringTypeHandler实现BaseTypeHandler
+
+```java
+package com.example.springbootwithmybatis.type;
+
+import org.apache.ibatis.type.BaseTypeHandler;
+import org.apache.ibatis.type.JdbcType;
+import org.apache.ibatis.type.MappedJdbcTypes;
+
+import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * @Author: stopping
+ * @Date: 2020/09/13 19:13
+ * 转载注明出处、个人博客网站:www.stopping.top
+ */
+@MappedJdbcTypes(JdbcType.VARCHAR)
+public class MyStringTypeHandler extends BaseTypeHandler<String> {
+    @Override
+    public void setNonNullParameter(PreparedStatement preparedStatement, int i, String s, JdbcType jdbcType) throws SQLException {
+        System.out.println("==========================myStringHandler=================setNonNullproperties");
+        if (s.equals("1")){
+            s = "Jone";
+        }
+        preparedStatement.setString(i,s);
+    }
+
+    @Override
+    public String getNullableResult(ResultSet resultSet, String s) throws SQLException {
+        System.out.println("========================myStringHandler=============getNullableResult");
+        return resultSet.getString(s);
+    }
+
+    @Override
+    public String getNullableResult(ResultSet resultSet, int i) throws SQLException {
+        System.out.println("========================myStringHandler=============getNullableResult");
+        return resultSet.getString(i);
+    }
+
+    @Override
+    public String getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
+        System.out.println("========================myStringHandler=============getNullableResult");
+        return callableStatement.getString(i);
+    }
+}
+```
+
+
+
+2、在Springboot配置文件中注册typeHandler
+
+```yml
+#mybatis的相关配置
+mybatis:
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.example.springbootwithmybatis.pojo
+  #注册typeHandler
+  type-handlers-package: com.example.springbootwithmybatis.type
+  #开启驼峰命名
+  configuration:
+    map-underscore-to-camel-case: true
+```
+
+==注==：如果使用springboot配置就不能使用mybatis.xml配置。
+
+mybatis.xml配置方式
+
+```yml
+server:
+  port: 8080
+spring:
+  #数据库连接配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/test?characterEncoding=utf-8&useSSL=false&serverTimezone=UTC
+    username: root
+    password:
+
+#mybatis的相关配置
+mybatis:
+  config-location: classpath:mybatis-config.xml
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+```
+
+mybatis-config.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+        PUBLIC "-mybatis.orgDTD Config 3.0EN"
+        "http:mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <setting name="defaultStatementTimeout" value="300" />
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <setting name="cacheEnabled" value="true"/>
+    </settings>
+    <typeAliases>
+        <package name="com.example.springbootwithmybatis.pojo"/>
+    </typeAliases>
+    <typeHandlers>
+        <package name="com.example.springbootwithmybatis.type"/>
+    </typeHandlers>
+    <mappers>
+        <package name="com.example.springbootwithmybatis.mapper"/>
+    </mappers>
+</configuration>
+```
+
+
+
+3、在mapper文件中使用
+
+```xml
+    <select id="findAllUserByName" parameterType="string" resultType="User">
+        select * from  user where name = #{name,jdbcType=VARCHAR,typeHandler=com.example.springbootwithmybatis.type.MyStringTypeHandler}
+    </select>
+```
+
+4、测试结果
+
+```
+2020-09-13 20:07:34.572  INFO 14772 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 9 ms
+2020-09-13 20:07:34.709  INFO 14772 --- [nio-8080-exec-1] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2020-09-13 20:07:34.867  INFO 14772 --- [nio-8080-exec-1] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+==========================myStringHandler=================setNonNullproperties
+========================myStringHandler=============getNullableResult
+========================myStringHandler=============getNullableResult
+```
+
+![image-20200913201302219](https://i.loli.net/2020/09/16/IePd5GZt9HQF87V.png)
+
+
+
+### 案例二：java对象保存到varchar
+
+实现内容：将User中的Blog实体保存到数据库pojo字段中。
+
+1、数据库格式
+
+![image-20200916160614050](https://i.loli.net/2020/09/16/Sf9z2xGh71kKPrv.png)
+
+2、User实体类
+
+```java
+@Data
+public class User {
+
+    private Integer id;
+    private String name;
+    private Integer age;
+    private String email;
+    private Blog pojo;
+}
+
+@Data
+public class Blog implements Serializable {
+    private String content;
+    private String title;
+}
+```
+
+3、新建TypeHandler
+
+```java
+/**
+ * @Author: stopping
+ * @Date: 2020/09/16 14:16
+ * 转载注明出处、个人博客网站:www.stopping.top
+ */
+@MappedJdbcTypes(JdbcType.VARCHAR)
+public class BlogToPojoTypeHandler extends BaseTypeHandler<Blog> {
+    @Override
+    public void setNonNullParameter(PreparedStatement preparedStatement, int i, Blog user, JdbcType jdbcType) throws SQLException {
+        System.out.println(JSONObject.toJSONString(user));
+        //将实体类转为json 保存到数据库中
+        String json = JSONObject.toJSONString(user);
+        preparedStatement.setString(i,json);
+    }
+
+    @Override
+    public Blog getNullableResult(ResultSet resultSet, String s) throws SQLException {
+        //json反序列化为java对象
+        String r = resultSet.getString(s);
+        Blog user = JSONObject.parseObject(r,Blog.class);
+        System.out.println(user.toString());
+        return user;
+    }
+
+    @Override
+    public Blog getNullableResult(ResultSet resultSet, int i) throws SQLException {
+        Blog user = (Blog) JSONObject.parse(resultSet.getString(i));
+        System.out.println(user.toString());
+        return user;
+    }
+
+    @Override
+    public Blog getNullableResult(CallableStatement callableStatement, int i) throws SQLException {
+        Blog user = (Blog)JSONObject.parse(callableStatement.getString(i));
+        System.out.println(user.toString());
+        return user;
+    }
+}
+
+```
+
+4、mybatis配置信息
+
+```xml
+<typeHandlers>
+    <package name="com.example.springbootwithmybatis.type"/>
+</typeHandlers>
+```
+
+5、Mapper映射加入typeHandler处理
+
+这里pojo对应User中的Blog，在BlogToPojoTypeHandler中处理。
+
+```xml
+<insert id="insertUser" parameterType="User" >
+    INSERT `user`(name,age,email,pojo) VALUES (#{user.name},#{user.age},#{user.email},#{user.pojo,jdbcType=VARCHAR,typeHandler=com.example.springbootwithmybatis.type.BlogToPojoTypeHandler});
+</insert>
+```
+
+6、测试
+
+```java
+    @Test
+    void insertUser() {
+    	//插入数据
+        User user = new User();
+        Blog blog =new Blog();
+        blog.setContent("测试blog编程json");
+        blog.setTitle("this is Title");
+        user.setEmail("10312@qq.com");
+        user.setAge(12);
+        user.setName("xdp");
+        user.setPojo(blog);
+        userMapper.insertUser(user);
+        System.out.println("test");
+
+	    //查询数据
+        User user = userMapper.findAllUserByName("xdp");
+        System.out.println(user.toString());
+    }
+```
+
+测试结果：
+
+```
+Blog(content=测试blog编程json, title=this is Title)
+User(id=11, name=xdp, age=12, email=10312@qq.com, pojo=Blog(content=测试blog编程json, title=this is Title))
+```
+
+数据库插入内容：
+
+![image-20200916161357909](https://i.loli.net/2020/09/16/UfnEu1jM9FzPQel.png)
+
+==问题==：
+
+1、数据库字符格式报错
+
+​	`MySQL数据库不能插入中文报错:Incorrect string value: '\xE6\xB5\x8B\xE8\xAF\x95' for column 'type_name' at row 1`
+
+需要将数据库、数据表的字符编码格式修改成utf8
+
+```mysql
+show create table `user`;
+ALTER TABLE `user` CONVERT TO CHARACTER SET utf8 
+```
+
+2、fastjson parse转对象报错
+
+使用toJSONString序列化、parseObject反序列化
+
+```
+String text = JSON.toJSONString(obj); //序列化
+VO vo = JSON.parseObject("{...}", VO.class); //反序列化
+```
+
+
+
+## 3、关于数据类型声明的使用
+
+使用上述的类型处理器将会覆盖已有的处理 Java String 类型的属性以及 VARCHAR 类型的参数和结果的类型处理器。 要注意 MyBatis 不会通过检测数据库元信息来决定使用哪种类型，所以你必须在参数和结果映射中指明字段是VARCHAR 类型， 以使其能够绑定到正确的类型处理器上。这是因为 MyBatis 直到语句被执行时才清楚数据类型。通过类型处理器的泛型，
+
+MyBatis 可以得知该类型处理器处理的 ==`Java`==类型，不过这种行为可以通过两种方法改变：
+
+- 在类型处理器的配置元素（typeHandler 元素）上增加一个 `javaType` 属性（比如：`javaType="String"`）；
+- 在类型处理器的类上增加一个 ==`@MappedTypes`== 注解指定与其关联的 Java 类型列表。 如果在 `javaType` 属性中也同时指定，则注解上的配置将被忽略。
+
+可以通过两种方式来指定关联的 ==JDBC== 类型：
+
+- 在类型处理器的配置元素上增加一个 `jdbcType` 属性（比如：`jdbcType="VARCHAR"`）；
+- 在类型处理器的类上增加一个 `@MappedJdbcTypes` 注解指定与其关联的 JDBC 类型列表。 如果在 `jdbcType` 属性中也同时指定，则注解上的配置将被忽略。
+
+当在 `ResultMap` 中决定使用哪种类型处理器时，此时 Java 类型是已知的（从结果类型中获得），但是 JDBC 类型是未知的。 因此 Mybatis 使用 `javaType=[Java 类型], jdbcType=null` 的组合来选择一个类型处理器。 这意味着使用 `@MappedJdbcTypes` 注解可以*限制*类型处理器的作用范围，并且可以确保，除非显式地设置，否则类型处理器在 `ResultMap` 中将不会生效。 如果希望能在 `ResultMap` 中隐式地使用类型处理器，那么设置 `@MappedJdbcTypes` 注解的 `includeNullJdbcType=true` 即可。 然而从 Mybatis 3.4.0 开始，如果某个 Java 类型**只有一个**注册的类型处理器，即使没有设置 `includeNullJdbcType=true`，那么这个类型处理器也会是 `ResultMap` 使用 Java 类型时的默认处理器。
+
+# 六、ObjectFactory 对象工厂
+
+（待补充 启动失败）
+
+
+
+
+
+# 七、Mapper 映射器
+
+告诉 MyBatis 到哪里去找映射文件四种方式：
+
+```xml
+<!-- 使用相对于类路径的资源引用 -->
+<mappers>
+  <mapper resource="org/mybatis/builder/AuthorMapper.xml"/>
+  <mapper resource="org/mybatis/builder/BlogMapper.xml"/>
+  <mapper resource="org/mybatis/builder/PostMapper.xml"/>
+</mappers>
+<!-- 使用完全限定资源定位符（URL） -->
+<mappers>
+  <mapper url="file:///var/mappers/AuthorMapper.xml"/>
+  <mapper url="file:///var/mappers/BlogMapper.xml"/>
+  <mapper url="file:///var/mappers/PostMapper.xml"/>
+</mappers>
+<!-- 使用映射器接口实现类的完全限定类名 -->
+<mappers>
+  <mapper class="org.mybatis.builder.AuthorMapper"/>
+  <mapper class="org.mybatis.builder.BlogMapper"/>
+  <mapper class="org.mybatis.builder.PostMapper"/>
+</mappers>
+<!-- 将包内的映射器接口实现全部注册为映射器(常用) -->
+<mappers>
+  <package name="org.mybatis.builder"/>
+</mappers>
+```
+
+
+
+
+
