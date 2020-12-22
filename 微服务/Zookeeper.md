@@ -49,6 +49,8 @@ RPC 的优势在于高效的网络传输模型（常使用 NIO 来实现），�
 
 # 四、解决方案 -zookeeper
 
+ZooKeeper is a==centralized service== for maintaining configuration information, naming, providing distributed synchronization, and providing group services. All of these kinds of services are used in some form or another by distributed applications. Each time they are implemented there is a lot of work that goes into fixing the bugs and race conditions that are inevitable. Because of the difficulty of implementing these kinds of services, applications initially usually skimp on them, which make them brittle in the presence of change and difficult to manage. Even when done correctly, different implementations of these services lead to management complexity when the applications are deployed.
+
 **分布式协调**组件服务。基于google Chubby思想的实现。
 
 ![image-20200601165902303](H:\TyporaImage\咕泡学习\微服务\Zookeeper\image-20200601165902303.png)
@@ -83,7 +85,7 @@ zk实现的机制：
 
 ## 2、分布式锁服务
 
-从另外一个层面来看，Chubby 提供了一种粗粒度的分布式锁服务，chubby 是通过创建文件的形式来提供锁的功能，server 向 chubby 中创建文件其实就表示加锁操作，创建文件成功表示抢占到了锁。由于 Chubby 没有开源，所以雅虎公司基于 chubby 的思想，开发了一个类似的分布式协调组件 Zookeeper，后来捐赠给了 Apache。所以，大家一定要了解，zookeeper 并不是作为注册中心而设计，他是作为分布式锁的一种设计。而注册中心只是他能够实现的一种功能而已。
+从另外一个层面来看，Chubby 提供了一种粗粒度的分布式锁服务，chubby 是通过创建文件的形式来提供锁的功能，server 向 chubby 中创建文件其实就表示加锁操作，创建文件成功表示抢占到了锁。由于 Chubby 没有开源，所以雅虎公司基于 chubby 的思想，开发了一个类似的分布式协调组件 Zookeeper，后来捐赠给了 Apache。所以，大家一定要了解，zookeeper 并不是作为注册中心而设计，他是作为==分布式锁==的一种设计。而注册中心只是他能够实现的一种功能而已。
 
 ## 3、zookeeper实现
 

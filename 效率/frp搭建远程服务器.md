@@ -23,7 +23,7 @@ server_port = 7000
 	-	screen -S frp 指定一个frp的会话
 	-	./frps -c frps.ini 运行
 
-![img](img/948623-20200414183120685-437487143.png)
+![img](https://i.loli.net/2020/11/28/IB6hjQCN4aZF7AJ.png)
 
 5、出现start frps success则成功运行
 
@@ -64,7 +64,7 @@ PS F:\app\远程工具\frp_0.33.0_windows_amd64> .\frpc.exe -c .\frpc.ini
 
 1、设置允许远程 我的电脑 - 右键属性 -远程设置 - 允许
 
-![image-20200720214732413](img/image-20200720214732413.png)
+![image-20200720214732413](https://i.loli.net/2020/11/28/Uz6AXvgYdZWOufR.png)
 
 ![image-20200720215911596](img/image-20200720215911596.png)
 
@@ -78,7 +78,7 @@ PS F:\app\远程工具\frp_0.33.0_windows_amd64> .\frpc.exe -c .\frpc.ini
 
 3、右键-新建-字符串-粘贴启动方式地址
 
-![image-20200721233349818](img/image-20200721233349818.png)
+![image-20200721233349818](https://i.loli.net/2020/11/28/oCc7vydUaziN3j1.png)
 
 
 
